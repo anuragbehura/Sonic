@@ -24,22 +24,44 @@ export function PlayerEngine() {
             pause: () => player.pause(),
             seekTo: (seconds) => player.seekTo(seconds),
         });
-    }, []);
+    }, [player, registerControls]);
+
+    useEffect(() => {
+        console.log("PLAYER ENGINE MOUNTED");
+
+        registerControls({
+            play: () => {
+                console.log("REAL PLAYER PLAY CALLED");
+                player.play();
+            },
+
+            pause: () => {
+                console.log("REAL PLAYER PAUSE CALLED");
+                player.pause();
+            },
+
+            seekTo: (seconds) => {
+                player.seekTo(seconds);
+            },
+        });
+    }, [player, registerControls]);
 
     // swap + play whenever a new song is selected
     useEffect(() => {
         if (!currentSong) return;
-        const sourceUri = currentSong.local_uri;
-        if (!sourceUri) return;
+        console.log("CURRENT SONG OBJECT:", JSON.stringify(currentSong, null, 2));
+        const rawUri = currentSong.uri;
+        if (!rawUri) return;
+        const sourceUri = rawUri.startsWith('file://') ? rawUri : `file://${rawUri}`;
         player.replace({ uri: sourceUri });
         player.play();
-    }, [currentSong?.id]);
+    }, [currentSong, player]);
 
     // keep store in sync with real engine state
     useEffect(() => {
         setIsPlaying(status.playing);
         setProgress(status.currentTime, status.duration);
-    }, [status.playing, status.currentTime, status.duration]);
+    }, [status.playing, status.currentTime, status.duration, setIsPlaying, setProgress]);
 
     // auto-advance when track ends
     useEffect(() => {
@@ -64,7 +86,7 @@ export function PlayerEngine() {
         if (currentSong && isPlaying) {
             updateLastPlayed(currentSong.id);
         }
-    }, [currentSong?.id, isPlaying]);
+    }, [currentSong, isPlaying, updateLastPlayed]);
 
     // sleep timer check - polls every 5 seconds per §8.3
     useEffect(() => {

@@ -2,10 +2,11 @@ import { Slot } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useEffect, useState } from 'react';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { initDb } from '../database/sqllite';
 import { ToastHost } from '@/components/ui/Toast';
 import { PlayerEngine } from '@/audio/PlayerEngine';
-import { MiniPlayer } from '@/components/player/MiniPlayer';
+import { SplashLoading } from '@/components/ui/SplashLoading';
 import '@/global.css';
 
 SplashScreen.preventAutoHideAsync();
@@ -20,15 +21,20 @@ export default function RootLayout() {
   }, []);
 
   if (!dbReady) {
-    return null;
+    return (
+      <SafeAreaProvider>
+        <SplashLoading />
+      </SafeAreaProvider>
+    );
   }
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <PlayerEngine />
-      <MiniPlayer />
-      <ToastHost />
-      <Slot />
-    </GestureHandlerRootView>
+    <SafeAreaProvider>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <PlayerEngine />
+        <ToastHost />
+        <Slot />
+      </GestureHandlerRootView>
+    </SafeAreaProvider>
   );
 }

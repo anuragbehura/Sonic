@@ -1,7 +1,7 @@
 export interface Song {
     id: string;
 
-    local_uri?: string;
+    uri?: string;
 
     title: string;
 
@@ -12,6 +12,8 @@ export interface Song {
     artwork?: string;
 
     duration?: number;
+    
+    date_added?: number;
 
     // hybrid cloud fields
     cloud_key?: string;

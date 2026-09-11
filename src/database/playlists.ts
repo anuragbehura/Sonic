@@ -1,4 +1,6 @@
 import { getDb } from "./sqllite";
+import { Song } from "../types/music";
+import { mapRowToSong } from "./songs";
 
 export interface Playlist {
   id: string;
@@ -27,14 +29,15 @@ export async function deletePlaylist(id: string): Promise<void> {
   await db.runAsync(`DELETE FROM playlist_songs WHERE playlist_id = ?`, [id]);
 }
 
-export async function getPlaylistSongs(playlistId: string) {
+export async function getPlaylistSongs(playlistId: string): Promise<Song[]> {
   const db = await getDb();
-  return db.getAllAsync(`
+  const rows = await db.getAllAsync<any>(`
     SELECT s.* FROM songs s
     JOIN playlist_songs ps ON s.id = ps.song_id
     WHERE ps.playlist_id = ?
     ORDER BY ps.position ASC
   `, [playlistId]);
+  return Promise.all(rows.map(mapRowToSong));
 }
 
 export async function addSongToPlaylist(playlistId: string, songId: string): Promise<void> {

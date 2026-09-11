@@ -1,6 +1,6 @@
 import { View, Text, Pressable } from "react-native";
 import { Image } from "expo-image";
-import { MoreVertical } from "lucide-react-native";
+import { Lucide } from "@react-native-vector-icons/lucide";
 import { Song } from "../../types/music";
 
 interface SongRowProps {
@@ -33,7 +33,7 @@ export function SongRow({ song, isActive, isPlaying, onPress, onMenuPress }: Son
                 <Text className="text-body text-accent">▶</Text>
             ) : (
                 <Pressable onPress={onMenuPress} hitSlop={10} className="p-1">
-                    <MoreVertical size={20} color="#6B7280" />
+                    <Lucide name="more-vertical" size={20} color="#6B7280" />
                 </Pressable>
             )}
         </Pressable>

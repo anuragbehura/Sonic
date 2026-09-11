@@ -10,13 +10,13 @@ export async function insertSong(song: Song) {
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
             song.id,
-            song.local_uri ?? null,
+            song.uri ?? null,
             song.title,
             song.artist ?? null,
             song.album ?? null,
             song.artwork ?? null,
             song.duration ?? null,
-            Date.now(),
+            song.date_added ?? Date.now(),   // ← preserve original; fall back to now
             song.play_count ?? 0,
             song.is_favorite ? 1 : 0,
             song.cloud_key ?? null,
@@ -29,25 +29,35 @@ export async function insertSong(song: Song) {
 
 export async function getSongByLocalUri(localUri: string): Promise<Song | null> {
     const db = await getDb();
-    const result = await db.getFirstAsync<Song>(
+    const row = await db.getFirstAsync<any>(
         `SELECT * FROM songs WHERE local_uri = ?`,
         [localUri]
     );
-    return result ?? null;
+    return row ? mapRowToSong(row) : null;
 }
 
 export async function getSongById(id: string): Promise<Song | null> {
     const db = await getDb();
-    const result = await db.getFirstAsync<Song>(
+    const row = await db.getFirstAsync<any>(
         `SELECT * FROM songs WHERE id = ?`,
         [id]
     );
-    return result ?? null;
+    return row ? mapRowToSong(row) : null;
+}
+
+export async function mapRowToSong(row: any): Promise<Song> {
+    return {
+        ...row,
+        uri: row.local_uri ?? row.uri,   // normalize
+    };
 }
 
 export async function getAllSongs(): Promise<Song[]> {
     const db = await getDb();
-    return db.getAllAsync<Song>(`SELECT * FROM songs ORDER BY date_added DESC`);
+    const rows = await db.getAllAsync<any>(
+        `SELECT * FROM songs ORDER BY date_added DESC`
+    );
+    return Promise.all(rows.map(mapRowToSong));
 }
 
 export async function updateSongLocalUri(id: string, localUri: string | null): Promise<void> {

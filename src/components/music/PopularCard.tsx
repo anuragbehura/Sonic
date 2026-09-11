@@ -1,6 +1,6 @@
 import { View, Text, Pressable } from "react-native";
 import { Image } from "expo-image";
-import { Play, Heart } from "lucide-react-native";
+import { Lucide } from "@react-native-vector-icons/lucide";
 import { Song } from "../../types/music";
 
 interface PopularCardProps {
@@ -25,11 +25,11 @@ export function PopularCard({ song, isFavorite, onPress, onToggleFavorite }: Pop
                 </Text>
                 <View className="flex-row items-center gap-2">
                     <Pressable onPress={onPress} className="touch-target flex-row items-center gap-1 bg-accent px-3 py-1.5 rounded-pill">
-                        <Play size={14} color="white" fill="white" />
+                        <Lucide name="play" size={14} color="white" />
                         <Text className="text-caption-sm text-white">{song.play_count ?? 0}</Text>
                     </Pressable>
                     <Pressable onPress={onToggleFavorite} className="touch-target flex-row items-center gap-1 bg-white/15 px-3 py-1.5 rounded-pill">
-                        <Heart size={14} color={isFavorite ? "#1DB954" : "white"} fill={isFavorite ? "#1DB954" : "transparent"} />
+                        <Lucide name="heart" size={14} color={isFavorite ? "#1DB954" : "white"} />
                     </Pressable>
                 </View>
             </View>

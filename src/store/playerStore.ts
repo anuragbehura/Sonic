@@ -64,7 +64,9 @@ export const usePlayerStore = create<PlayerState>()(
             setCurrentSong: (song) => set({ currentSong: song }),
             setIsPlaying: (isPlaying) => set({ isPlaying }),
             setProgress: (currentTime, duration) => set({ currentTime, duration }),
-            play: () => { },
+            play: () => {
+                console.log("EMPTY PLAY FUNCTION CALLED");
+            },
             pause: () => { },
             seekTo: () => { },
             _registerControls: (controls) => set(controls),

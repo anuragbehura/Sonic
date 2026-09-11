@@ -20,7 +20,13 @@ function getCoversDir() {
 
 export async function extractMetadata(fileUri: string, songId: string) {
     try {
-        const { metadata } = await getAudioMetadata(fileUri, [
+        // ensure file:// scheme
+        const normalizedUri = fileUri.startsWith("file://")
+            ? fileUri
+            : `file://${fileUri}`;
+
+            
+        const { metadata } = await getAudioMetadata(normalizedUri, [
             "name",
             "artist",
             "album",
@@ -30,16 +36,19 @@ export async function extractMetadata(fileUri: string, songId: string) {
         console.log("METADATA RESULT for", fileUri, JSON.stringify(metadata));
 
         let artworkUri: string | undefined;
-        if (metadata.artwork) {
-            const base64Data = metadata.artwork.includes(",")
-                ? metadata.artwork.split(",")[1]
-                : metadata.artwork;
+        if (metadata.artwork && typeof metadata.artwork === "string") {
+            const base64Data = metadata.artwork.trim();
 
-            const artworkFile = new File(getCoversDir(), `${songId}.jpg`);
-            await FileSystem.writeAsStringAsync(artworkFile.uri, base64Data, {
-                encoding: FileSystem.EncodingType.Base64,
-            });
-            artworkUri = artworkFile.uri;
+            // sanity-check: base64 strings are typically at least a few hundred chars
+            if (base64Data.length > 100) {
+                const artworkFile = new File(getCoversDir(), `${songId}.jpg`);
+                await FileSystem.writeAsStringAsync(
+                    artworkFile.uri,
+                    base64Data,
+                    { encoding: FileSystem.EncodingType.Base64 }
+                );
+                artworkUri = artworkFile.uri;
+            }
         }
 
         return {
@@ -84,7 +93,7 @@ export async function pickAndImportSongs(): Promise<Song[]> {
 
         const song: Song = {
             id,
-            local_uri: destFile.uri,
+            uri: destFile.uri,
             title: meta.title || asset.name.replace(/\.[^/.]+$/, ""),
             artist: meta.artist || "Unknown Artist",
             album: meta.album,

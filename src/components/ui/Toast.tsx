@@ -11,7 +11,7 @@ export function ToastHost() {
         if (!message) return;
         const timer = setTimeout(hide, 2000);
         return () => clearTimeout(timer);
-    }, [message]);
+    }, [message, hide]);
 
     if (!message) return null;
 
