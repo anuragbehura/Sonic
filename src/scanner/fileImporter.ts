@@ -1,108 +1,236 @@
 import * as DocumentPicker from "expo-document-picker";
+
 import { File, Directory, Paths } from "expo-file-system";
-import * as FileSystem from "expo-file-system/legacy";
-import { getAudioMetadata } from "@missingcore/audio-metadata";
+
 import { getSongByLocalUri, insertSong } from "../database/songs";
+
 import { useToastStore } from "../store/toastStore";
+
 import { Song } from "../types/music";
+
 
 function getSongsDir() {
     const dir = new Directory(Paths.document, "songs");
-    if (!dir.exists) dir.create();
+
+    if (!dir.exists) {
+        dir.create();
+    }
+
     return dir;
 }
+
 
 function getCoversDir() {
     const dir = new Directory(Paths.document, "covers");
-    if (!dir.exists) dir.create();
+
+    if (!dir.exists) {
+        dir.create();
+    }
+
     return dir;
 }
 
-export async function extractMetadata(fileUri: string, songId: string) {
+
+function removeExtension(filename: string) {
+    return filename.replace(/\.[^/.]+$/, "");
+}
+
+
+/**
+ * Metadata fallback.
+ *
+ * Expo FileSystem can read the audio file, but it does not currently
+ * parse ID3 tags for us automatically.
+ *
+ * For now we use the filename as the title.
+ */
+export async function extractMetadata(
+    fileUri: string,
+    songId: string
+): Promise<{
+    title?: string;
+    artist?: string;
+    album?: string;
+    artwork?: string;
+}> {
+
     try {
-        // ensure file:// scheme
-        const normalizedUri = fileUri.startsWith("file://")
-            ? fileUri
-            : `file://${fileUri}`;
 
-            
-        const { metadata } = await getAudioMetadata(normalizedUri, [
-            "name",
-            "artist",
-            "album",
-            "artwork",
-        ]);
+        console.log("========== METADATA DEBUG ==========");
+        console.log("FILE URI:", fileUri);
+        console.log("SONG ID:", songId);
 
-        console.log("METADATA RESULT for", fileUri, JSON.stringify(metadata));
+        const file = new File(fileUri);
 
-        let artworkUri: string | undefined;
-        if (metadata.artwork && typeof metadata.artwork === "string") {
-            const base64Data = metadata.artwork.trim();
+        console.log("FILE EXISTS:", file.exists);
+        console.log("FILE NAME:", file.name);
+        console.log("FILE SIZE:", file.size);
 
-            // sanity-check: base64 strings are typically at least a few hundred chars
-            if (base64Data.length > 100) {
-                const artworkFile = new File(getCoversDir(), `${songId}.jpg`);
-                await FileSystem.writeAsStringAsync(
-                    artworkFile.uri,
-                    base64Data,
-                    { encoding: FileSystem.EncodingType.Base64 }
-                );
-                artworkUri = artworkFile.uri;
-            }
-        }
+        const filename = file.name;
 
         return {
-            title: metadata.name || undefined,
-            artist: metadata.artist || undefined,
-            album: metadata.album || undefined,
-            artwork: artworkUri,
+            title: removeExtension(filename),
+            artist: "Unknown Artist",
+            album: undefined,
+            artwork: undefined,
         };
-    } catch (err) {
-        console.log("METADATA EXTRACTION FAILED for", fileUri, err);
+
+    } catch (error) {
+
+        console.log(
+            "METADATA EXTRACTION FAILED:",
+            error
+        );
+
         return {};
     }
 }
 
+
 export async function pickAndImportSongs(): Promise<Song[]> {
+
     const result = await DocumentPicker.getDocumentAsync({
+
         type: "audio/*",
+
         multiple: true,
+
         copyToCacheDirectory: true,
+
     });
 
-    if (result.canceled) return [];
+
+    if (result.canceled) {
+        return [];
+    }
+
 
     const songsDir = getSongsDir();
+
     const imported: Song[] = [];
 
+
     for (const asset of result.assets) {
-        const destFile = new File(songsDir, asset.name);
 
-        const existing = await getSongByLocalUri(destFile.uri);
-        if (existing) {
-            useToastStore.getState().show(`"${asset.name}" already imported`);
-            imported.push(existing);
-            continue;
+        try {
+
+            console.log("========== IMPORT DEBUG ==========");
+
+            console.log("ASSET NAME:", asset.name);
+
+            console.log("ASSET URI:", asset.uri);
+
+
+            const destFile = new File(
+                songsDir,
+                asset.name
+            );
+
+
+            console.log(
+                "DEST URI:",
+                destFile.uri
+            );
+
+
+            const existing =
+                await getSongByLocalUri(
+                    destFile.uri
+                );
+
+
+            if (existing) {
+
+                useToastStore
+                    .getState()
+                    .show(
+                        `"${asset.name}" already imported`
+                    );
+
+                imported.push(existing);
+
+                continue;
+            }
+
+
+            const sourceFile =
+                new File(asset.uri);
+
+
+            sourceFile.copy(destFile);
+
+
+            console.log(
+                "COPIED TO:",
+                destFile.uri
+            );
+
+
+            const id =
+                `${Date.now()}-${Math.random()
+                    .toString(36)
+                    .slice(2, 8)}`;
+
+
+            const meta =
+                await extractMetadata(
+                    destFile.uri,
+                    id
+                );
+
+
+            const song: Song = {
+
+                id,
+
+                local_uri: destFile.uri,
+
+                title:
+                    meta.title ||
+                    removeExtension(asset.name),
+
+                artist:
+                    meta.artist ||
+                    "Unknown Artist",
+
+                album:
+                    meta.album,
+
+                artwork:
+                    meta.artwork,
+
+                date_added:
+                    Date.now(),
+
+                play_count:
+                    0,
+
+                is_favorite:
+                    false,
+
+            };
+
+
+            console.log(
+                "SAVING SONG:",
+                song
+            );
+
+
+            await insertSong(song);
+
+
+            imported.push(song);
+
+        } catch (error) {
+
+            console.error(
+                `FAILED TO IMPORT ${asset.name}:`,
+                error
+            );
         }
-
-        const sourceFile = new File(asset.uri);
-        sourceFile.copy(destFile);
-
-        const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-        const meta = await extractMetadata(destFile.uri, id);
-
-        const song: Song = {
-            id,
-            uri: destFile.uri,
-            title: meta.title || asset.name.replace(/\.[^/.]+$/, ""),
-            artist: meta.artist || "Unknown Artist",
-            album: meta.album,
-            artwork: meta.artwork,
-        };
-
-        await insertSong(song);
-        imported.push(song);
     }
+
 
     return imported;
 }

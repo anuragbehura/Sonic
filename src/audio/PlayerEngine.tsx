@@ -50,7 +50,7 @@ export function PlayerEngine() {
     useEffect(() => {
         if (!currentSong) return;
         console.log("CURRENT SONG OBJECT:", JSON.stringify(currentSong, null, 2));
-        const rawUri = currentSong.uri;
+        const rawUri = currentSong.local_uri;
         if (!rawUri) return;
         const sourceUri = rawUri.startsWith('file://') ? rawUri : `file://${rawUri}`;
         player.replace({ uri: sourceUri });

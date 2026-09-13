@@ -6,7 +6,7 @@ export async function rescanAllMetadata() {
     console.log(`Rescanning ${songs.length} songs...`);
 
     for (const song of songs) {
-        const localUri = song.uri;   // now populated by the mapper
+        const localUri = song.local_uri;
 
         if (!localUri) {
             console.warn(`Skipping "${song.title}" — no local URI`);

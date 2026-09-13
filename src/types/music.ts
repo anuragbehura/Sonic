@@ -1,7 +1,7 @@
 export interface Song {
     id: string;
 
-    uri?: string;
+    local_uri?: string;
 
     title: string;
 
